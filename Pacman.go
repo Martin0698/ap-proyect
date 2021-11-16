@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 )
@@ -21,6 +22,12 @@ import (
 
 var maze []string
 var player sprite
+var ghosts []*sprite
+var score int
+var numDots int
+var lives = 1
+
+//LOAD MAZE
 
 func loadMaze(file string) error {
 	f, err := os.Open(file)
@@ -43,6 +50,10 @@ func loadMaze(file string) error {
 			switch char {
 			case 'P':
 				player = sprite{row, col}
+			case 'G':
+				ghosts = append(ghosts, &sprite{row, col})
+			case '.':
+				numDots++
 			}
 		}
 	}
@@ -60,6 +71,8 @@ func printMaze() {
 		for _, chr := range line {
 			switch chr {
 			case '#':
+				fallthrough
+			case '.':
 				fmt.Printf("%c", chr)
 			default:
 				fmt.Print("")
@@ -70,10 +83,19 @@ func printMaze() {
 	simpleansi.MoveCursor(player.row, player.col)
 	fmt.Print("P")
 
+	for _, g := range ghosts {
+		simpleansi.MoveCursor(g.row, g.col)
+		fmt.Print("G")
+	}
+
 	simpleansi.MoveCursor(len(maze)+1, 0)
+
+	//PRINTING SCORE
+	fmt.Println("Score", score, "\t Lives: ", lives)
 }
 
 //3. GAME LOOP
+// MAIN
 func main() {
 
 	cbreakMode()
@@ -94,8 +116,17 @@ func main() {
 		}
 		//process movement
 		movePlayer(input)
+		moveGhosts()
 
-		if input == "ESC" {
+		//process collisions
+		for _, g := range ghosts {
+			if player == *g {
+				lives = 0
+			}
+		}
+
+		// Game Over Cases:
+		if input == "ESC" || numDots == 0 || lives <= 0 {
 			break
 		}
 	}
@@ -210,4 +241,42 @@ func makeMove(oldRow, oldCol int, dir string) (newRow, newCol int) {
 //Move player
 func movePlayer(dir string) {
 	player.row, player.col = makeMove(player.row, player.col, dir)
+	player.row, player.col = makeMove(player.row, player.col, dir)
+	switch maze[player.row][player.col] {
+	case '.':
+		numDots--
+		score++
+		//Remove dot from the maze
+		maze[player.row] = maze[player.row][0:player.col] + " " + maze[player.row][player.col+1:]
+
+	}
 }
+
+//4.  GHOSTS
+
+////////////////////////////////////
+////							////
+////		MAKING GHOSTS		////
+///			    				////
+////////////////////////////////////
+
+//Random generator to control our ghosts.
+func drawDirection() string {
+	dir := rand.Intn(4)
+	move := map[int]string{
+		0: "UP",
+		1: "DOWN",
+		2: "RIGHT",
+		3: "LEFT",
+	}
+	return move[dir]
+}
+
+func moveGhosts() {
+	for _, g := range ghosts {
+		dir := drawDirection()
+		g.row, g.col = makeMove(g.row, g.col, dir)
+	}
+}
+
+// 5. Game win
