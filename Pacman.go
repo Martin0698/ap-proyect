@@ -75,10 +75,10 @@ func printMaze() {
 			case '.':
 				fmt.Printf("%c", chr)
 			default:
-				fmt.Print("")
+				fmt.Print(" ")
 			}
 		}
-		fmt.Println(line)
+		fmt.Println()
 	}
 	MoveCursor(player.row, player.col)
 	fmt.Print("P")
@@ -141,7 +141,7 @@ func main() {
 */
 
 func cbreakMode() {
-	cbTerm := exec.Command("stty", "cbreak", "echo")
+	cbTerm := exec.Command("stty", "cbreak", "-echo")
 	cbTerm.Stdin = os.Stdin
 
 	err := cbTerm.Run()
@@ -240,7 +240,6 @@ func makeMove(oldRow, oldCol int, dir string) (newRow, newCol int) {
 
 //Move player
 func movePlayer(dir string) {
-	player.row, player.col = makeMove(player.row, player.col, dir)
 	player.row, player.col = makeMove(player.row, player.col, dir)
 	switch maze[player.row][player.col] {
 	case '.':
