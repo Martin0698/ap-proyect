@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"time"
 )
 
 //READ THE MAZE DATA
@@ -101,21 +102,37 @@ func main() {
 	cbreakMode()
 	defer cookedMode()
 
+	//Load Maze
 	err := loadMaze("maze01.txt")
 	if err != nil {
 		log.Println("failed to load maze: ", err)
 		return
 	}
-	for {
-		printMaze()
 
-		input, err := readInput()
-		if err != nil {
-			log.Println("Error reading input: ", err)
-			break
+	//process input async way
+	input := make(chan string)
+	go func(ch chan<- string) {
+		for {
+			input, err := readInput()
+			if err != nil {
+				log.Println("error reading input:", err)
+				ch <- "ESC"
+			}
+			ch <- input
+		}
+	}(input)
+	for {
+
+		select {
+		case inp := <-input:
+			if inp == "ESC" {
+				lives = 0
+			}
+			movePlayer(inp)
+		default:
 		}
 		//process movement
-		movePlayer(input)
+
 		moveGhosts()
 
 		//process collisions
@@ -125,10 +142,15 @@ func main() {
 			}
 		}
 
+		// update screen
+		printMaze()
+
 		// Game Over Cases:
-		if input == "ESC" || numDots == 0 || lives <= 0 {
+		if numDots == 0 || lives <= 0 {
 			break
 		}
+		// repeat
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
