@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
@@ -41,7 +44,7 @@ var player sprite
 var ghosts []*sprite
 var score int
 var numDots int
-var lives = 1
+var lives = 3
 var cfg config
 
 // Load Configuration from jsons files
@@ -84,9 +87,9 @@ func loadMaze(file string) error {
 		for col, char := range line {
 			switch char {
 			case 'P':
-				player = sprite{row, col}
+				player = sprite{row, col, row, col}
 			case 'G':
-				ghosts = append(ghosts, &sprite{row, col})
+				ghosts = append(ghosts, &sprite{row, col, row, col})
 			case '.':
 				numDots++
 			}
@@ -134,25 +137,39 @@ func printMaze() {
 
 	MoveEmoji(len(maze)+1, 0)
 
+	livesRemaining := strconv.Itoa(lives)
+	if cfg.UseEmoji {
+		livesRemaining = getLivesAsEmoji()
+	}
+
 	//PRINTING SCORE
-	fmt.Println("Score", score, "\t Lives: ", lives)
+	fmt.Println("Score", score, "\t Lives: ", livesRemaining)
+}
+
+func getLivesAsEmoji() string {
+	buf := bytes.Buffer{}
+	for i := lives; i > 0; i-- {
+		buf.WriteString(cfg.Player)
+	}
+	return buf.String()
 }
 
 //3. GAME LOOP
 // MAIN
 func main() {
+	flag.Parse()
 
 	cbreakMode()
 	defer cookedMode()
 
 	//Load Maze
-	err := loadMaze("maze01.txt")
+	err := loadMaze(*mazeFile)
 	if err != nil {
 		log.Println("failed to load maze: ", err)
 		return
 	}
 
-	err = loadConfig("config.json")
+	err = loadConfig(*configFile)
 	if err != nil {
 		log.Println("Failed to load configuration", err)
 		return
@@ -186,8 +203,15 @@ func main() {
 
 		//process collisions
 		for _, g := range ghosts {
-			if player == *g {
-				lives = 0
+			if player.row == g.row && player.col == g.col {
+				lives = lives - 1
+				if lives != 0 {
+					MoveEmoji(player.row, player.col)
+					fmt.Print(cfg.Death)
+					MoveEmoji(len(maze)+2, 0)
+					time.Sleep(1000 * time.Millisecond)
+					player.row, player.col = player.startRow, player.startCol
+				}
 			}
 		}
 
@@ -274,8 +298,10 @@ func readInput() (string, error) {
 // Tracking player position
 
 type sprite struct {
-	row int
-	col int
+	row      int
+	col      int
+	startRow int
+	startCol int
 }
 
 //HANDLE MOVEMENT
@@ -419,3 +445,8 @@ func WithBackground(text string, colour Colour) string {
 	//Default to blue if none resolved
 	return WithBlueBackground(text)
 }
+
+var (
+	configFile = flag.String("config-file", "config.json", "path to custom configuration file")
+	mazeFile   = flag.String("maze-file", "maze01.txt", "path to a custom maze file")
+)
