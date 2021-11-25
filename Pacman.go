@@ -25,13 +25,13 @@ import (
 //Struct tag
 type config struct {
 	Player   string `json:"player"`
-	Ghost    string `json:"player"`
-	Wall     string `json:"player"`
-	Dot      string `json:"player"`
-	Pill     string `json:"player"`
-	Death    string `json:"player"`
-	Space    string `json:"player"`
-	UseEmoji bool   `json:"player"`
+	Ghost    string `json:"ghost"`
+	Wall     string `json:"wall"`
+	Dot      string `json:"dot"`
+	Pill     string `json:"pill"`
+	Death    string `json:"death"`
+	Space    string `json:"space"`
+	UseEmoji bool   `json:"use_emoji"`
 }
 
 // 1. Read the file maze01.txt
@@ -46,8 +46,8 @@ var cfg config
 
 // Load Configuration from jsons files
 
-func loadConfig(Jsonfile string) error {
-	f, err := os.Open(Jsonfile)
+func loadConfig(file string) error {
+	f, err := os.Open(file)
 	if err != nil {
 		return err
 	}
@@ -115,11 +115,11 @@ func printMaze() {
 			case '#':
 				fmt.Print(WithBlueBackground(cfg.Wall))
 			case '.':
-				fmt.Printf("%c", chr)
+				fmt.Printf(cfg.Dot)
 			case 'X':
 				fmt.Print(cfg.Pill)
 			default:
-				fmt.Print(" ")
+				fmt.Print(cfg.Space)
 			}
 		}
 		fmt.Println()
@@ -129,7 +129,7 @@ func printMaze() {
 
 	for _, g := range ghosts {
 		MoveEmoji(g.row, g.col)
-		fmt.Print("G")
+		fmt.Print(cfg.Ghost)
 	}
 
 	MoveEmoji(len(maze)+1, 0)
@@ -155,6 +155,7 @@ func main() {
 	err = loadConfig("config.json")
 	if err != nil {
 		log.Println("Failed to load configuration", err)
+		return
 	}
 
 	//process input async way
@@ -194,7 +195,7 @@ func main() {
 		printMaze()
 
 		// Game Over Cases:
-		if numDots == 0 || lives <= 0 {
+		if numDots == 0 || lives == 0 {
 			if lives == 0 {
 				MoveEmoji(player.row, player.col)
 				fmt.Print(cfg.Death)
@@ -316,13 +317,22 @@ func makeMove(oldRow, oldCol int, dir string) (newRow, newCol int) {
 //Move player
 func movePlayer(dir string) {
 	player.row, player.col = makeMove(player.row, player.col, dir)
+
+	removeDot := func(row, col int) {
+		maze[row] = maze[row][0:col] + " " + maze[row][col+1:]
+	}
+
 	switch maze[player.row][player.col] {
 	case '.':
 		numDots--
 		score++
 		//Remove dot from the maze
-		maze[player.row] = maze[player.row][0:player.col] + " " + maze[player.row][player.col+1:]
+		//maze[player.row] = maze[player.row][0:player.col] + " " + maze[player.row][player.col+1:]
 
+		removeDot(player.row, player.col)
+	case 'X':
+		score += 10
+		removeDot(player.row, player.col)
 	}
 }
 
