@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -19,6 +20,20 @@ import (
 - X represents the power up pills
 */
 
+// 7. EMOJIS, CONFIG JSONS
+
+//Struct tag
+type config struct {
+	Player   string `json:"player"`
+	Ghost    string `json:"player"`
+	Wall     string `json:"player"`
+	Dot      string `json:"player"`
+	Pill     string `json:"player"`
+	Death    string `json:"player"`
+	Space    string `json:"player"`
+	UseEmoji bool   `json:"player"`
+}
+
 // 1. Read the file maze01.txt
 
 var maze []string
@@ -27,6 +42,25 @@ var ghosts []*sprite
 var score int
 var numDots int
 var lives = 1
+var cfg config
+
+// Load Configuration from jsons files
+
+func loadConfig(Jsonfile string) error {
+	f, err := os.Open(Jsonfile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	decoder := json.NewDecoder(f)
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 //LOAD MAZE
 
@@ -62,8 +96,15 @@ func loadMaze(file string) error {
 	return nil
 }
 
-//2.  PRINTING TO THE TERMINAL
+func MoveEmoji(row, col int) {
+	if cfg.UseEmoji {
+		MoveCursor(row, col*2)
+	} else {
+		MoveCursor(row, col)
+	}
+}
 
+//2.  PRINTING TO THE TERMINAL
 func printMaze() {
 	ClearScreen()
 	//It does not working
@@ -72,24 +113,26 @@ func printMaze() {
 		for _, chr := range line {
 			switch chr {
 			case '#':
-				fallthrough
+				fmt.Print(WithBlueBackground(cfg.Wall))
 			case '.':
 				fmt.Printf("%c", chr)
+			case 'X':
+				fmt.Print(cfg.Pill)
 			default:
 				fmt.Print(" ")
 			}
 		}
 		fmt.Println()
 	}
-	MoveCursor(player.row, player.col)
+	MoveEmoji(player.row, player.col)
 	fmt.Print("P")
 
 	for _, g := range ghosts {
-		MoveCursor(g.row, g.col)
+		MoveEmoji(g.row, g.col)
 		fmt.Print("G")
 	}
 
-	MoveCursor(len(maze)+1, 0)
+	MoveEmoji(len(maze)+1, 0)
 
 	//PRINTING SCORE
 	fmt.Println("Score", score, "\t Lives: ", lives)
@@ -107,6 +150,11 @@ func main() {
 	if err != nil {
 		log.Println("failed to load maze: ", err)
 		return
+	}
+
+	err = loadConfig("config.json")
+	if err != nil {
+		log.Println("Failed to load configuration", err)
 	}
 
 	//process input async way
@@ -147,6 +195,11 @@ func main() {
 
 		// Game Over Cases:
 		if numDots == 0 || lives <= 0 {
+			if lives == 0 {
+				MoveEmoji(player.row, player.col)
+				fmt.Print(cfg.Death)
+				MoveCursor(len(maze)+2, 0)
+			}
 			break
 		}
 		// repeat
@@ -217,7 +270,7 @@ func readInput() (string, error) {
 
 // 5. MOVEMENT
 
-// TRacking player position
+// Tracking player position
 
 type sprite struct {
 	row int
@@ -312,6 +365,7 @@ func ClearScreen() {
 //
 // Please note that ANSI is 1-based and the top left corner is (1,1), but here we are assuming
 // the user is using a zero based coordinate system where the top left corner is (0, 0)
+
 func MoveCursor(row, col int) {
 	fmt.Printf("\x1b[%d;%df", row+1, col+1)
 }
