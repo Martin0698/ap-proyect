@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -27,25 +28,42 @@ import (
 
 //Struct tag
 type config struct {
-	Player   string `json:"player"`
-	Ghost    string `json:"ghost"`
-	Wall     string `json:"wall"`
-	Dot      string `json:"dot"`
-	Pill     string `json:"pill"`
-	Death    string `json:"death"`
-	Space    string `json:"space"`
-	UseEmoji bool   `json:"use_emoji"`
+	Player    string        `json:"player"`
+	Ghost     string        `json:"ghost"`
+	Wall      string        `json:"wall"`
+	Dot       string        `json:"dot"`
+	Pill      string        `json:"pill"`
+	Death     string        `json:"death"`
+	Space     string        `json:"space"`
+	UseEmoji  bool          `json:"use_emoji"`
+	GhostBlue string        `json:"ghost_blue"`
+	PillTime  time.Duration `json:"pillTime"`
 }
+
+type GhostStatus string
+
+type ghost struct {
+	position sprite
+	status   GhostStatus
+}
+
+const (
+	GhostStatusNormal GhostStatus = "Normal"
+	GhostStatusBlue   GhostStatus = "Blue"
+)
 
 // 1. Read the file maze01.txt
 
 var maze []string
 var player sprite
-var ghosts []*sprite
+var ghosts []*ghost
 var score int
 var numDots int
 var lives = 3
 var cfg config
+var pillTimer *time.Timer
+var ghostsStatusMx sync.RWMutex
+var pillMx sync.Mutex
 
 // Load Configuration from jsons files
 
@@ -89,7 +107,7 @@ func loadMaze(file string) error {
 			case 'P':
 				player = sprite{row, col, row, col}
 			case 'G':
-				ghosts = append(ghosts, &sprite{row, col, row, col})
+				ghosts = append(ghosts, &ghost{sprite{row, col, row, col}, GhostStatusNormal})
 			case '.':
 				numDots++
 			}
@@ -105,6 +123,21 @@ func MoveEmoji(row, col int) {
 	} else {
 		MoveCursor(row, col)
 	}
+}
+
+func processPill() {
+	pillMx.Lock()
+	updateGhosts(ghosts, GhostStatusBlue)
+	if pillTimer != nil {
+		pillTimer.Stop()
+	}
+	pillTimer = time.NewTimer(time.Second * cfg.PillTime)
+	pillMx.Unlock()
+	<-pillTimer.C
+	pillMx.Lock()
+	pillTimer.Stop()
+	updateGhosts(ghosts, GhostStatusNormal)
+	pillMx.Unlock()
 }
 
 //2.  PRINTING TO THE TERMINAL
@@ -128,12 +161,20 @@ func printMaze() {
 		fmt.Println()
 	}
 	MoveEmoji(player.row, player.col)
-	fmt.Print("P")
+	fmt.Print(cfg.Player)
+
+	ghostsStatusMx.RLock()
 
 	for _, g := range ghosts {
-		MoveEmoji(g.row, g.col)
-		fmt.Print(cfg.Ghost)
+		MoveEmoji(g.position.row, g.position.col)
+		if g.status == GhostStatusNormal {
+			fmt.Printf(cfg.Ghost)
+		} else if g.status == GhostStatusBlue {
+			fmt.Printf(cfg.GhostBlue)
+		}
+
 	}
+	ghostsStatusMx.RUnlock()
 
 	MoveEmoji(len(maze)+1, 0)
 
@@ -152,6 +193,14 @@ func getLivesAsEmoji() string {
 		buf.WriteString(cfg.Player)
 	}
 	return buf.String()
+}
+
+func updateGhosts(ghost []*ghost, ghostStatus GhostStatus) {
+	ghostsStatusMx.Lock()
+	defer ghostsStatusMx.Unlock()
+	for _, g := range ghosts {
+		g.status = ghostStatus
+	}
 }
 
 //3. GAME LOOP
@@ -203,14 +252,23 @@ func main() {
 
 		//process collisions
 		for _, g := range ghosts {
-			if player.row == g.row && player.col == g.col {
-				lives = lives - 1
-				if lives != 0 {
-					MoveEmoji(player.row, player.col)
-					fmt.Print(cfg.Death)
-					MoveEmoji(len(maze)+2, 0)
-					time.Sleep(1000 * time.Millisecond)
-					player.row, player.col = player.startRow, player.startCol
+			if player.row == g.position.row && player.col == g.position.col {
+				ghostsStatusMx.RLock()
+				if g.status == GhostStatusNormal {
+					lives = lives - 1
+					if lives != 0 {
+						MoveEmoji(player.row, player.col)
+						fmt.Print(cfg.Death)
+						MoveEmoji(len(maze)+2, 0)
+						ghostsStatusMx.RUnlock()
+						updateGhosts(ghosts, GhostStatusNormal)
+						time.Sleep(1000 * time.Millisecond)
+						player.row, player.col = player.startRow, player.startCol
+					}
+				} else if g.status == GhostStatusBlue {
+					ghostsStatusMx.RUnlock()
+					updateGhosts([]*ghost{g}, GhostStatusNormal)
+					g.position.row, g.position.col = g.position.startRow, g.position.startCol
 				}
 			}
 		}
@@ -219,11 +277,13 @@ func main() {
 		printMaze()
 
 		// Game Over Cases:
-		if numDots == 0 || lives == 0 {
+		if numDots == 0 || lives <= 0 {
 			if lives == 0 {
 				MoveEmoji(player.row, player.col)
 				fmt.Print(cfg.Death)
-				MoveCursor(len(maze)+2, 0)
+				MoveCursor(player.startRow, player.startCol-1)
+				fmt.Print("GAME OVER")
+				MoveEmoji(len(maze)+2, 0)
 			}
 			break
 		}
@@ -317,7 +377,7 @@ func makeMove(oldRow, oldCol int, dir string) (newRow, newCol int) {
 		}
 	case "DOWN":
 		newRow = newRow + 1
-		if newRow == len(maze) {
+		if newRow == len(maze)-1 {
 			newRow = 0
 		}
 	case "RIGHT":
@@ -359,6 +419,7 @@ func movePlayer(dir string) {
 	case 'X':
 		score += 10
 		removeDot(player.row, player.col)
+		go processPill()
 	}
 }
 
@@ -385,7 +446,7 @@ func drawDirection() string {
 func moveGhosts() {
 	for _, g := range ghosts {
 		dir := drawDirection()
-		g.row, g.col = makeMove(g.row, g.col, dir)
+		g.position.row, g.position.col = makeMove(g.position.row, g.position.col, dir)
 	}
 }
 
