@@ -143,7 +143,7 @@ func processPill() {
 //2.  PRINTING TO THE TERMINAL
 func printMaze() {
 	ClearScreen()
-	//It does not working
+
 	//we need to clear the screen after each loop
 	for _, line := range maze {
 		for _, chr := range line {
