@@ -55,6 +55,7 @@ const (
 // 1. Read the file maze01.txt
 
 var maze []string
+var maze02 []string
 var player sprite
 var ghosts []*ghost
 var score int
@@ -205,23 +206,42 @@ func updateGhosts(ghost []*ghost, ghostStatus GhostStatus) {
 
 //3. GAME LOOP
 // MAIN
+
 func main() {
 	flag.Parse()
+
+	fmt.Println("Enter the numbers of ghosts: ")
+	var num string
+	fmt.Scanln(&num)
 
 	cbreakMode()
 	defer cookedMode()
 
-	//Load Maze
-	err := loadMaze(*mazeFile)
-	if err != nil {
-		log.Println("failed to load maze: ", err)
-		return
-	}
+	if num == "1" {
+		//Load Maze
+		err := loadMaze(*mazeFile)
+		if err != nil {
+			log.Println("failed to load maze: ", err)
+			return
 
-	err = loadConfig(*configFile)
-	if err != nil {
-		log.Println("Failed to load configuration", err)
-		return
+		}
+		err = loadConfig(*configFile)
+		if err != nil {
+			log.Println("Failed to load configuration", err)
+			return
+		}
+
+	} else if num == "2" {
+		err := loadMaze(*mazeFile2)
+		if err != nil {
+			log.Println("Failed to load configuration", err)
+			return
+		}
+		err = loadConfig(*configFile)
+		if err != nil {
+			log.Println("Failed to load configuration", err)
+			return
+		}
 	}
 
 	//process input async way
@@ -295,7 +315,7 @@ func main() {
 //4. TERMINAL MODE -> CBREAK MODE
 
 /*
- cbreak mode somo characters are preprocessed and
+ cbreak mode some characters are preprocessed and
  some are not. This terminal mode to allow us
  to handle the keys "esc" and arrow keys
 */
@@ -510,4 +530,5 @@ func WithBackground(text string, colour Colour) string {
 var (
 	configFile = flag.String("config-file", "config.json", "path to custom configuration file")
 	mazeFile   = flag.String("maze-file", "maze01.txt", "path to a custom maze file")
+	mazeFile2  = flag.String("maze-file02", "maze02.txt", "path to a custom a maze file")
 )
