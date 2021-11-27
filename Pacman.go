@@ -85,10 +85,8 @@ func loadConfig(file string) error {
 
 //LOAD MAZE
 
-func loadMaze(file string, ghosts int) error {
+func loadMaze(file string) error {
 	f, err := os.Open(file)
-	var counter int =0
-	
 	if err != nil {
 		return err
 	}
@@ -112,9 +110,8 @@ func loadMaze(file string, ghosts int) error {
 				player = sprite{row, col, row, col}
 			case 'G':
 				//if (counter <= ghost input)
-				if(counter < ghost){
+				if(counter <= Ginput){
 					ghosts = append(ghosts, &ghost{sprite{row, col, row, col}, GhostStatusNormal})
-					counter++;
 				}	
 				//}
 			case '.':
@@ -216,103 +213,89 @@ func updateGhosts(ghost []*ghost, ghostStatus GhostStatus) {
 // MAIN
 func main() {
 	flag.Parse()
-	fmt.Println("Enter the numbers of ghosts: ")
-	var num string
-	fmt.Scanln(&num)
-	
-	ghosts, err := strconv.Atoi(num)
+
+	cbreakMode()
+	defer cookedMode()
+
+	//Load Maze
+	err := loadMaze(*mazeFile)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Println("failed to load maze: ", err)
+		return
 	}
-	if (ghosts >0 && ghosts < 13){
-		cbreakMode()
-		defer cookedMode()
 
-		//Load Maze
-		err := loadMaze(*mazeFile, ghosts)
-		if err != nil {
-			log.Println("failed to load maze: ", err)
-			return
-		}
+	err = loadConfig(*configFile)
+	if err != nil {
+		log.Println("Failed to load configuration", err)
+		return
+	}
 
-		err = loadConfig(*configFile)
-		if err != nil {
-			log.Println("Failed to load configuration", err)
-			return
-		}
-
-		//process input async way
-		input := make(chan string)
-		go func(ch chan<- string) {
-			for {
-				input, err := readInput()
-				if err != nil {
-					log.Println("error reading input:", err)
-					ch <- "ESC"
-				}
-				ch <- input
-			}
-		}(input)
+	//process input async way
+	input := make(chan string)
+	go func(ch chan<- string) {
 		for {
-
-			select {
-			case inp := <-input:
-				if inp == "ESC" {
-					lives = 0
-				}
-				movePlayer(inp)
-			default:
+			input, err := readInput()
+			if err != nil {
+				log.Println("error reading input:", err)
+				ch <- "ESC"
 			}
-			//process movement
-
-			moveGhosts()
-
-			//process collisions
-			for _, g := range ghosts {
-				if player.row == g.position.row && player.col == g.position.col {
-					ghostsStatusMx.RLock()
-					if g.status == GhostStatusNormal {
-						lives = lives - 1
-						if lives != 0 {
-							MoveEmoji(player.row, player.col)
-							fmt.Print(cfg.Death)
-							MoveEmoji(len(maze)+2, 0)
-							ghostsStatusMx.RUnlock()
-							updateGhosts(ghosts, GhostStatusNormal)
-							time.Sleep(1000 * time.Millisecond)
-							player.row, player.col = player.startRow, player.startCol
-						}
-					} else if g.status == GhostStatusBlue {
-						ghostsStatusMx.RUnlock()
-						updateGhosts([]*ghost{g}, GhostStatusNormal)
-						g.position.row, g.position.col = g.position.startRow, g.position.startCol
-					}
-				}
-			}
-
-			// update screen
-			printMaze()
-
-			// Game Over Cases:
-			if numDots == 0 || lives <= 0 {
-				if lives == 0 {
-					MoveEmoji(player.row, player.col)
-					fmt.Print(cfg.Death)
-					MoveCursor(player.startRow, player.startCol-1)
-					fmt.Print("GAME OVER")
-					MoveEmoji(len(maze)+2, 0)
-				}
-				break
-			}
-			// repeat
-			time.Sleep(200 * time.Millisecond)
+			ch <- input
 		}
-	}else{
-		fmt.Println("Number of ghosts is invalid. Restart the game and put ghosts between 1 and 12")
-		os.Exit(1)
+	}(input)
+	for {
+
+		select {
+		case inp := <-input:
+			if inp == "ESC" {
+				lives = 0
+			}
+			movePlayer(inp)
+		default:
+		}
+		//process movement
+
+		moveGhosts()
+
+		//process collisions
+		for _, g := range ghosts {
+			if player.row == g.position.row && player.col == g.position.col {
+				ghostsStatusMx.RLock()
+				if g.status == GhostStatusNormal {
+					lives = lives - 1
+					if lives != 0 {
+						MoveEmoji(player.row, player.col)
+						fmt.Print(cfg.Death)
+						MoveEmoji(len(maze)+2, 0)
+						ghostsStatusMx.RUnlock()
+						updateGhosts(ghosts, GhostStatusNormal)
+						time.Sleep(1000 * time.Millisecond)
+						player.row, player.col = player.startRow, player.startCol
+					}
+				} else if g.status == GhostStatusBlue {
+					ghostsStatusMx.RUnlock()
+					updateGhosts([]*ghost{g}, GhostStatusNormal)
+					g.position.row, g.position.col = g.position.startRow, g.position.startCol
+				}
+			}
+		}
+
+		// update screen
+		printMaze()
+
+		// Game Over Cases:
+		if numDots == 0 || lives <= 0 {
+			if lives == 0 {
+				MoveEmoji(player.row, player.col)
+				fmt.Print(cfg.Death)
+				MoveCursor(player.startRow, player.startCol-1)
+				fmt.Print("GAME OVER")
+				MoveEmoji(len(maze)+2, 0)
+			}
+			break
+		}
+		// repeat
+		time.Sleep(200 * time.Millisecond)
 	}
-	
 }
 
 //4. TERMINAL MODE -> CBREAK MODE
@@ -461,7 +444,10 @@ func drawDirection() string {
 		0: "UP",
 		1: "DOWN",
 		2: "RIGHT",
-		3: "LEFT"
+		3: "LEFT",
+		4: "UP", 
+		5: "UP",
+		6: "UP"
 	}
 	return move[dir]
 }
