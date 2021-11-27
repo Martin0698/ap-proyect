@@ -454,12 +454,22 @@ func movePlayer(dir string) {
 
 //Random generator to control our ghosts.
 func drawDirection() string {
-	dir := rand.Intn(4)
+	dir := rand.Intn(14)
 	move := map[int]string{
-		0: "UP",
-		1: "DOWN",
-		2: "RIGHT",
-		3: "LEFT",
+		0:  "UP",
+		1:  "DOWN",
+		2:  "RIGHT",
+		3:  "LEFT",
+		4:  "UP",
+		5:  "DOWN",
+		6:  "RIGHT",
+		7:  "LEFT",
+		8:  "UP",
+		9:  "UP",
+		10: "RIGHT",
+		11: "LEFT",
+		12: "UP",
+		13: "DOWN",
 	}
 	return move[dir]
 }
