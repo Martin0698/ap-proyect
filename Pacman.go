@@ -147,15 +147,20 @@ func processPill() {
 }
 
 //2.  PRINTING TO THE TERMINAL
-func printMaze() {
+func printMaze(choose int) {
+	//we need to clear the screen after each loop
 	ClearScreen()
 
-	//we need to clear the screen after each loop
 	for _, line := range maze {
 		for _, chr := range line {
 			switch chr {
 			case '#':
-				fmt.Print(WithBlueBackground(cfg.Wall))
+				if choose == 1 {
+					fmt.Print(WithBackground(cfg.Wall, BLUE))
+				} else if choose == 2 {
+					fmt.Print(WithBackground(cfg.Wall, GREEN))
+				}
+
 			case '.':
 				fmt.Printf(cfg.Dot)
 			case 'X':
@@ -217,6 +222,12 @@ func main() {
 	fmt.Println("Enter the numbers of ghosts 1-12: ")
 	var num string
 	fmt.Scanln(&num)
+
+	fmt.Println("Choose with a number the color of the maze! ")
+	fmt.Println("1. Blue")
+	fmt.Println("2. Green")
+	var choose int
+	fmt.Scanln(&choose)
 
 	nghost, err := strconv.Atoi(num)
 	if err != nil {
@@ -290,7 +301,7 @@ func main() {
 			}
 
 			// update screen
-			printMaze()
+			printMaze(choose)
 
 			// Game Over Cases:
 			if numDots == 0 || lives <= 0 {
@@ -299,6 +310,12 @@ func main() {
 					fmt.Print(cfg.Death)
 					MoveCursor(player.startRow, player.startCol-1)
 					fmt.Print("GAME OVER")
+					MoveEmoji(len(maze)+2, 0)
+				} else if numDots == 0 {
+					MoveEmoji(player.row, player.col)
+					fmt.Print(cfg.Death)
+					MoveCursor(player.startRow, player.startCol-1)
+					fmt.Print("YOU WIN!!")
 					MoveEmoji(len(maze)+2, 0)
 				}
 				break
@@ -490,10 +507,6 @@ func ClearScreen() {
 }
 
 // MoveCursor sets the cursor position to given row and col.
-//
-// Please note that ANSI is 1-based and the top left corner is (1,1), but here we are assuming
-// the user is using a zero based coordinate system where the top left corner is (0, 0)
-
 func MoveCursor(row, col int) {
 	fmt.Printf("\x1b[%d;%df", row+1, col+1)
 }
@@ -508,20 +521,15 @@ const (
 	GREEN
 	BROWN
 	BLUE
-	MAGENTA
-	CYAN
-	GREY
 )
 
+//POSSIBLE MAZE COLORS!
+
 var colours = map[Colour]string{
-	BLACK:   "\x1b[1;30;40m",
-	RED:     "\x1b[1;31;41m",
-	GREEN:   "\x1b[1;32;42m",
-	BROWN:   "\x1b[1;33;43m",
-	BLUE:    "\x1b[1;34;44m",
-	MAGENTA: "\x1b[1;35;45m",
-	CYAN:    "\x1b[1;36;46m",
-	GREY:    "\x1b[1;37;47m",
+	BLACK: "\x1b[1;30;40m",
+	GREEN: "\x1b[1;32;42m",
+	BROWN: "\x1b[1;33;43m",
+	BLUE:  "\x1b[1;34;44m",
 }
 
 // WithBlueBackground wraps the given text with blue background and reset escape sequences.
@@ -529,7 +537,7 @@ func WithBlueBackground(text string) string {
 	return "\x1b[44m" + text + reset
 }
 
-// WithBackground wraps the given 'text' with 'colour' background and reset escape sequences.
+//CHOOSE COLOR OF THE MAZE
 func WithBackground(text string, colour Colour) string {
 	if c, ok := colours[colour]; ok {
 		return c + text + reset
