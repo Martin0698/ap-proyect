@@ -71,7 +71,7 @@ Both of fuctions to move the elements, is properly handle it with the fuction `m
 
 # Diagram 
 	
-	![Pacman Diagram](Images/Pacman Diagram.jpg)
+![Pacman Diagram](Images/Pacman_Diagram.jpg)
 	
 	
 ## UI Configuration
