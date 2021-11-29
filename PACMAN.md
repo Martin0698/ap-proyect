@@ -17,7 +17,7 @@ Remeber that the difficulty will depend on the number of ghosts selected,  and d
 
 |Blue Maze 	|Green Maze	|
 |-----------|-----------|
-<img src="Images/Maze_Azul.png" alt="Blue Maze" style="width:400px;"/>|<img src="Images/Maze_verde.png" alt="Green Maze" style="width:400px;"/>
+<img src="Images/Maze_Azul.png" alt="Blue Maze" style="width:400px;"/> | <img src="Images/Maze_Verde.png" alt="Green Maze" style="width:400px;"/>
 
 
 ## The Ghosts:
@@ -33,7 +33,7 @@ When you eat a pill, all the ghost will turn in to a Blue Ghost and you will be 
 
 |Pills		| Dots - Walls|
 |-----------|-----------|
-|<img src="Images/Pill.png" alt="Pill" style="width:300px;"/>|<img src="Images/Wall and dots.png" alt="Pill" style="width:300px;"/>
+|<img src="Images/Pill.png" alt="Pill" style="width:300px;"/>|<img src="Images/Wall and dots.PNG" alt="Pill" style="width:300px;"/>
 	
 	
 **Have fun!!!**
