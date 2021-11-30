@@ -2,7 +2,9 @@
 
 This is the classic pacman game, you will have 3 attemps to eat all the dots in the maze, just take care to be careful not to die when a ghost touch you. Remeber that the difficulty will depend on the number of ghosts selected,  and don't  forget to use the power up pills to eat some ghost and get some extra  points in your score.
 
-To run the game you willneed just to have installed Go and to run the command: `make run` ; to end the game in any moment just click the `ESC` key on the keyboard
+To run the game you will need just to have installed Go and to run the command: `make run`, to end the game in any moment just click the `ESC` key on the keyboard. Run the game in a full screen terminal tu avoid any bug.
+
+Pacman explanation video: [Pacman video - youtube](https://youtu.be/oachlGoEhhw)
 
 ## The Pacman:
 
