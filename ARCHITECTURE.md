@@ -1,5 +1,7 @@
 # Pacman Architecture
 
+Pacman explanation video: [Pacman video - youtube](https://youtu.be/oachlGoEhhw)
+
 The pacman game is implemented using multithreaded programing with the GO lenguage, because this aloud us to run the ghost enemies and the pacman in a independent way, we use the following components to reach the solution:
 
 ## Pacman:
@@ -93,4 +95,4 @@ The ui is done printing it in the console, we reached a friendly ui with  the fo
 	}
 ```
 
-	
+To run the game you will need just to have installed Go and to run the command: `make run`, to end the game in any moment just click the `ESC` key on the keyboard. Run the game in a full screen terminal tu avoid any bug.	
